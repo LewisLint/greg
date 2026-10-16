@@ -23,6 +23,9 @@ zstyle ':completion:*' format 'Completing %d'
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*' menu select=2
 eval "$(dircolors -b)"
+#export LS_COLORS='di=38;5;110:ln=38;5;109:ex=38;5;108:pi=38;5;180:so=38;5;139:bd=38;5;180:cd=38;5;180:or=38;5;131:mi=38;5;131'
+#export LS_COLORS="${LS_COLORS}:di=1;38;5;75:ow=1;38;5;75;48;5;236:tw=1;38;5;75;48;5;236:st=1;38;5;75;48;5;236"
+export LS_COLORS="${LS_COLORS}:di=1;38;5;75:ow=1;38;5;139:tw=1;38;5;139:st=1;38;5;139:*.go=1;38;5;75"
 zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
 zstyle ':completion:*' list-colors ''
 zstyle ':completion:*' list-prompt %SAt %p: Hit TAB for more, or the character to insert%s
@@ -145,3 +148,77 @@ PROMPT='%F{blue}%~%f $(build_arrow) '
 
 # aliases:
 alias ls='ls -aFBh --color=auto'
+if [ "$USER" = "root" ]; then
+    # --- Root Warning ---
+    print -P ""
+    print -P "  %F{196}WARNING: You are now logged in as root%f"
+    print -P "  %F{244}All commands you run will affect the root FS%f"
+    print -P "  %F{244}Current Node: %n on %m%f"
+    print -P ""
+
+    # --- Root-Specific Prompt ---
+    build_arrow() {
+        local exit_code=$?
+        if [ $exit_code -eq 0 ]; then
+            echo "%F{196}❯%f"
+        else
+            echo "%F{124} $exit_code ❯%f"
+        fi
+    }
+
+    PROMPT='%F{196}%n%f%F{244}@%m:%F{250}%~%f $(build_arrow) '
+
+    # --- Root Vi Mode ---
+    bindkey -v
+    KEYTIMEOUT=15
+
+    bindkey -M viins 'jj' vi-cmd-mode
+    bindkey -M viins '^?' backward-delete-char
+    bindkey -M viins '^H' backward-delete-char
+    bindkey -M vicmd '?' history-incremental-search-backward
+
+    # --- Root Cursor ---
+    _set_cursor_bar() { printf '\e[5 q' }
+
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd _set_cursor_bar
+
+    # --- Root Vi Mode Indicator ---
+    function zle-keymap-select() {
+        case $KEYMAP in
+            vicmd)      RPROMPT="%F{226}N%f" ;;
+            viins|main) RPROMPT="%F{196}I%f" ;;
+            visual)     RPROMPT="%F{244}V%f" ;;
+        esac
+        zle reset-prompt
+    }
+    zle -N zle-keymap-select
+
+    function zle-line-init() {
+        RPROMPT="%F{196}I%f"
+        _set_cursor_bar
+        zle reset-prompt
+    }
+    zle -N zle-line-init
+
+    # --- Root Safety Aliases ---
+    alias rm='rm -iv'
+    alias cp='cp -v'
+    alias mv='mv -v'
+    alias mkdir='mkdir -pv'
+    alias chown='chown --preserve-root -v'
+    alias chmod='chmod --preserve-root -v'
+    alias chgrp='chgrp --preserve-root -v'
+    alias ln='ln -iv'
+    alias rmdir='rmdir -v'
+    alias shred='shred -v'
+    alias dd='dd status=progress'
+
+    # --- Root Power Command Warnings ---
+    alias reboot='echo "WARNING: Rebooting system as root"; command reboot'
+    alias poweroff='echo "WARNING: Powering off system as root"; command poweroff'
+    alias shutdown='echo "WARNING: Shutting down system as root"; command shutdown'
+
+    # --- Root Sudo Prompt ---
+    export SUDO_PROMPT="[ROOT ACCESS] Password for %u: "
+fi
